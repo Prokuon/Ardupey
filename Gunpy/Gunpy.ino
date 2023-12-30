@@ -20,36 +20,36 @@
 Arduboy2 arduboy;
 
 // version
-const char version[] = "0.91";
+const char version[] = "0.92";
 
-// デバッグモード
+// debugging mode
 //#define DEBUG_MODE
 
 const int8_t ROWS = 5;
 const int8_t COLS = 10;
 
-// 接続チェック時の方向
+// Direction of connection check
 const int8_t CHECK_FROM_R = 0;
 const int8_t CHECK_FROM_L = 1;
 
 const int8_t ADD_BAR_SIZE = 69;
 
-// 消したブロック数ごとの点数
+// Number of points per deleted block.
 const int16_t SCORE_TABLE[51] PROGMEM = {
   0,
   0,0,0,0,5,10,15,20,25,30,40,50,60,70,80,100,120,140,160,180,200,250,300,350,400,450,500,550,600,
   650,750,850,950,1000,1200,1350,1500,1600,1800,2000,2200,2500,2800,3100,3400,3800,4200,4500,5000,
 };
 
-// レベルごとのブロック追加までの秒数(レベル10がMAX)
+// Number of seconds before adding a block at each level (MAX at level 10)
 const int8_t ADD_INTERVAL[11] = {
   13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3
 };
-// 全消しした時にもらえるレベルに応じたスコア
+// The score corresponding to the level that can be obtained when all cleared.
 const int16_t ALL_CLEAR_SCORE[11] = {
   100, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000
 };
-// レベルアップするまでの消去セル数
+// Number of erased cells before upgrade
 const int16_t LEVEL_UP_LINE[10] = {
   30, // 0->1
   60, // 1->2
@@ -63,61 +63,61 @@ const int16_t LEVEL_UP_LINE[10] = {
   400, // 9->10
 };
 
-// フレーム数(演出用)
+// Number of frames (for performance)
 int8_t frameNum = 0;
-// 現在のシーン
+// Current scene
 int8_t nowScene = 0;
-// 初期レベル
+// Initial level
 int8_t initLevel = 0;
-// 現在のレベル
+// Current level
 int8_t nowLevel = 0;
-// 現在のスコア
+// Current score
 int32_t nowScore = 0;
-// ハイスコア
+// Record score
 int32_t highScore = -1;
-// EEPROmの扱いがよく分からないからとりあえずオフセット120ぐらいずらしておく
+//? Because I don't know much about EEPROm processing, I stagger it by about 120 offset first.
 int16_t epr_address = EEPROM_STORAGE_SPACE_START + 120;
-// ハイスコア表示（ゲームオーバー画面用）
+// High score display (for game ending screen)
 bool isHighScore = false;
 
-// ブロック追加までのフレーム数
+// Number of frames before adding a block.
 int16_t remainAddFrame = 0;
 float remainAddFrameInit = 0;
-// ブロック追加までのバーサイズ
+// Column size before adding a block
 int8_t remainAddBar = 0;
 
-// 盤面
+// 
 Block* blocks[COLS][ROWS] = {};
-// 繋がりチェックのためのラインの一時保存領域(std::vectorが使えたらいいのに…)
+// Temporary storage area for lines used for connection checking (STD:: If only vector could be used …)
 Block* chainedBlocks[50] = {nullptr};
 int8_t chainedBlockIdx = 0;
 
 Player* player;
 
-// ブロックを入れ替えている瞬間は操作不可にする。そのための変数。
+// The moment when the block is replaced is set to be inoperable. The variable for this.
 int8_t isBlockMove = 0;
-// チェック中のラインが横に繋がったか
+// Check whether the line in is connected to the side.
 bool isCrossLine = false;
 int16_t totalRemoveCount = 0;
 
-// 入れ替え中のブロック
+// Block being replaced
 int8_t swpFromUpC = -1;
 int8_t swpFromUpR = -1;
 int8_t swpFromBottomC = -1;
 int8_t swpFromBottomR = -1;
 
-// ブロック消去演出用
+// Block erasure performance
 int16_t blockRemovalCount = 0;
-// ADDがあるか
+// Add or not
 bool isAdd = false;
 
-// 左下のイベントメッセージ
+// Event message in the ↙ corner
 Message* messages[3] = {new Message(0,0,0), new Message(0,0,0), new Message(0,0,0)};
 
-// ゲームオーバー演出用
+// For the end of the game
 int8_t gameOverAnim = 0;
 
-// ハイスコアリセット用
+// High score reset
 int16_t highScoreResetCount = 0;
 
 void setup() {
@@ -135,8 +135,8 @@ void setup() {
   
   player = new Player();
 
-  // 盤面にブロックを充填する
-  // 本当は都度newしたいがどうdeleteしてもなぜかメモリリークが起きるので最初に充填し使い回す
+  // Fill the chessboard with building blocks
+  // In fact, I miss new every time, but no matter how I delete it, I don't know why there will be a memory leak, so I use it repeatedly after filling it at first.
   for (int8_t r = 0; r < ROWS; r++) {
     for (int8_t c = 0; c < COLS; c++) {
       blocks[c][r] = new Block(Blc::TYPE_1);
@@ -144,7 +144,7 @@ void setup() {
   }
 
 #ifdef DEBUG_MODE
-// デバッグ用。初期配置
+// For debugging. Initial configuration
 remainAddFrame = 999;
 blocks[7][0]->isLive = true; blocks[7][0]->type = 0;
 blocks[7][1]->isLive = true; blocks[7][1]->type = 1;
@@ -170,7 +170,7 @@ void loop() {
   if (!arduboy.nextFrame()) return;
   arduboy.pollButtons();
 
-  // フレーム数処理(演出用)
+  // Frame number processing (for performance)
   if ( --frameNum <= 0 ) {
     frameNum = Setting::FPS;
   }
@@ -243,17 +243,17 @@ void sceneTitle() {
   // Tinyfont tinyfont = Tinyfont(arduboy.sBuffer, Arduboy2::width(), Arduboy2::height());
   Font4x6 tinyfont = Font4x6();
   if ( highScore > 0 ) {
-    tinyfont.setCursor(2, 2);
+    tinyfont.setCursor(0, 2);
     tinyfont.print(F("HighScore:"));
     tinyfont.print(highScore);
   }
 
   if ( frameNum < (Setting::FPS/2) ) {
-    tinyfont.setCursor(26, 36);
-    tinyfont.print(F("PRESS [A] BTTON"));
+    tinyfont.setCursor(24, 36);
+    tinyfont.print(F("PRESS [A] BUTTON"));
   }
 
-  tinyfont.setCursor(2, 48);
+  tinyfont.setCursor(0, 48);
   tinyfont.print(F("InitLv:"));
   tinyfont.print(initLevel);
   tinyfont.print(F(" "));
@@ -264,10 +264,10 @@ void sceneTitle() {
     tinyfont.print(F(">"));
  }
 
-  tinyfont.setCursor(2, 56);
+  tinyfont.setCursor(0, 56);
   tinyfont.print(F("[B] Help"));
 
-  tinyfont.setCursor(90, 56);
+  tinyfont.setCursor(89, 56);
   tinyfont.print(F("ver:"));
   tinyfont.print(version);
 
@@ -361,11 +361,11 @@ void scenePlay() {
 
   arduboy.clear();
 
-  // 追加ブロックの処理判定
+  // Additional block processing decision
   if ( blockRemovalCount == 0 ) {
     if ( remainAddFrame > 0 ) {
 #ifdef DEBUG_MODE
-  // デバッグ時は時限ライン追加しない
+  // Do not add a time limit line when debugging.
 #else
         remainAddFrame--;
 #endif
@@ -373,7 +373,7 @@ void scenePlay() {
   }
 
   if ( isBlockMove > 0 ) {
-    // ブロック入れ替え移動中はキー操作は受け付けない
+    // Key operation is not accepted in block replacement movement.
     isBlockMove--;
     if ( isBlockMove == 0 ) {
       bool tmpUpIsLive = blocks[swpFromUpC][swpFromUpR]->isLive;
@@ -390,11 +390,11 @@ void scenePlay() {
   } else {
 
     if ( remainAddFrame <= 0 ) {
-        // ブロック追加処理
+        // Block addition processing
         addBlock();
 
     } else {
-      // Player操作処理(ブロック追加処理中はユーザー操作は受け付けさせない)
+      // Player operation processing (user operation is not accepted in block append processing)
       if ( player->isFocusPause ) {
         if (arduboy.justReleased(LEFT_BUTTON)) {
           player->defocusPause();
@@ -419,14 +419,14 @@ void scenePlay() {
           if (player->x < ROWS - 1) {
             player->set(player->x + 1, player->y);
           } else {
-            // 右端でさらに右押したらPauseボタンフォーカス
+            // If you right-click on the right end again, the Pause button will focus.
             player->focusPause();
           }
         } else if (arduboy.justReleased(A_BUTTON)) {
-          // ブロック入れ替え
+          // Block exchange
           if ( ( !blocks[player->y][player->x]->isLive || ( blocks[player->y][player->x]->isLive && !blocks[player->y][player->x]->isRemoving ) ) &&
           ( !blocks[player->y+1][player->x]->isLive || blocks[player->y+1][player->x]->isLive && !blocks[player->y+1][player->x]->isRemoving ) ) {
-            // 除去処理中は動かせなくする
+            // Can't move in the removal process.
             swpFromUpC = player->y;
             swpFromUpR = player->x;
             swpFromBottomC = player->y+1;
@@ -434,7 +434,7 @@ void scenePlay() {
             isBlockMove = 3;
           }
         } else if (arduboy.justReleased(B_BUTTON)) {
-          // ブロック手動追加処理
+          // Block manual addition processing
           if ( blockRemovalCount == 0 ) {
             addBlock();
           }
@@ -443,12 +443,12 @@ void scenePlay() {
 
     }
 
-    // チェック処理
+    // Check and handle
     initBlockChained();
     for (int8_t c = 0; c < COLS; c++) {
-      // ブロックを走査しつながるか確認
+      // Scan the block and confirm whether it is connected.
       checkChained( c, 0, CHECK_FROM_L );
-      // 走査が終わった後の消せるブロックマーク
+      // Box marks that can be eliminated after scanning.
     }
 
   }
@@ -470,7 +470,7 @@ void scenePlay() {
           if ( !blocks[c][r]->isLive ) continue;
           if ( blocks[c][r]->isChained && !blocks[c][r]->isRemoving ) {
             blocks[c][r]->isRemoving = true;
-            // ADD演出
+            // ADD performance
             if ( !isAdd ) {
               putMessage( Setting::MSG_HIT_ADD, 0, 0 );
               isAdd = true;
@@ -498,20 +498,20 @@ void scenePlay() {
     }
 
     if ( remBlockNum > 0 ) {
-      // 点数加算
+      // Add points
       int16_t addingScore = pgm_read_word(&SCORE_TABLE[remBlockNum]);
       if ( isAdd ) {
         addingScore *= 2;
         isAdd = false;
       }
       nowScore += addingScore;
-      // メッセージ描画
+      // Message drawing
       putMessage( Setting::MSG_HIT, remBlockNum, addingScore );
 
       if ( nowLevel < 10 ) {
         if ( LEVEL_UP_LINE[nowLevel] < totalRemoveCount ) {
           nowLevel++;
-          // レベルアップ演出
+          // Upgrade performance
           putMessage( Setting::MSG_LEVEL_UP, 0, 0 );
         }
       }
@@ -528,13 +528,13 @@ void scenePlay() {
     }
     if ( isAllClear ) {
       nowScore += ALL_CLEAR_SCORE[nowLevel];
-      // 全消し演出
+      // All clear performance
       putMessage( Setting::MSG_ALL_CLEAR, 0, 0 );
     }
 
   }
 
-  // 本ループでのブロック除去判定が終わったので初期化
+  // The block removal judgment in this cycle has ended, so initialization is performed.
   clearChainedBlocks();
   isCrossLine = false;
 
@@ -578,8 +578,8 @@ void sceneGameover() {
     gameOverAnim++;
 
     if ( gameOverAnim == Setting::FPS ) {
-      // ハイスコア更新チェック
-      if ( highScore < nowScore ) {
+      // High score update check
+      if ( highScore <= nowScore ) {
         isHighScore = true;
         saveHighScore( nowScore );
         highScore = nowScore;
@@ -620,7 +620,7 @@ void drawBg() {
   // }
 
   // arduboy.drawRect(29, 60, 71, 4, WHITE);
-  // ブロック追加残り時間バー描画
+  // Add block remaining time bar drawing
   arduboy.drawBitmap(0, 0, gunpypic, 128, 64, WHITE);
 
   float percentage = (float)remainAddFrame / (float)remainAddFrameInit; 
@@ -634,7 +634,7 @@ void drawUI() {
 
   Font4x6 tinyfont = Font4x6();
 
-  // レベル表示
+  // Level display
   // arduboy.drawLine( 0, 0, 28, 0, WHITE );
   tinyfont.setCursor(22, 4);
   // tinyfont.print(F("Lv:"));
@@ -644,7 +644,7 @@ void drawUI() {
   } else {
     tinyfont.print(nowLevel);
   }
-  // スコア表示
+  // Score display
   // arduboy.drawLine( 0, 9, 28, 9, WHITE );
   tinyfont.setCursor(5*(6-digits(nowScore)) - 3, 18);
   tinyfont.print(nowScore);
@@ -654,7 +654,7 @@ void drawUI() {
   tinyfont.setCursor(5*(6-digits(highScore)) + 97, 16);
   tinyfont.print(highScore);
   
-  // メッセージ表示
+  // Message display
   for ( int8_t i = 0; i < 3; i++ ) {
     if ( messages[i]->isLive ) {
       int8_t offsetX = 0;
@@ -691,7 +691,7 @@ void drawUI() {
     }
   }
 
-  // ポーズボタン。コーヒーカップ。
+  // Pause button Coffee cup.
   // arduboy.drawBitmap(105, 23, IMG_PAUSE, 16, 16, WHITE);
 
   bool isWarn = false;
@@ -724,6 +724,10 @@ void drawPlayer() {
     arduboy.fillRect(101, 55, 27, 9, BLACK);
     arduboy.drawBitmap(101, 55, pausepic, 27, 9, WHITE);
   } else {
+    if (player->x < 0 || player->y < 0)
+    {
+      player->x = 0, player->y = 0;
+    }
     arduboy.fillRect(30 + (14 * player->x), 1 + (6 * player->y), 13, 11, WHITE);
     arduboy.drawLine(30 + (14 * player->x), 1 + (6 * player->y) + 5, 30 + (14 * player->x) + 12, 1 + (6 * player->y) + 5, BLACK);
   }
@@ -778,12 +782,12 @@ void initBlockChained() {
 
 bool checkChained( int8_t c, int8_t r, int8_t d ) {
 
-  // 該当マスにブロックが無い場合はスルー
+  // When there are no blocks in the cell, skip.
   if ( !blocks[c][r]->isLive ) return false;
 
   if ( r == ROWS - 1 ) {
     isCrossLine = true;
-    // 右端に到達、全仮ChainにisChainedフラグを立てる
+    // Reach the right end, and set the isChained flag on all temporary Chain.
     blocks[c][r]->isChained = true;
     fixChainedBlocks();
     return true;
@@ -796,7 +800,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
   bool isChained = false;
   if ( blocks[c][r]->type == Blc::TYPE_1 ) {
     if ( d == CHECK_FROM_L ) {
-      // 右隣
+      // →
       if ( blocks[c][r+1]->isLive && !isAlreadyCheckChained( blocks[c][r+1] ) ) {
         if ( blocks[c][r+1]->type == Blc::TYPE_2 || blocks[c][r+1]->type == Blc::TYPE_4 ) {
           pushChainedBlocks(blocks[c][r]);
@@ -812,7 +816,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
           }
         }
       }
-      //右斜め下隣
+      // ↘
       if ( c < COLS - 1 ) {
         if ( blocks[c+1][r+1]->isLive && !isAlreadyCheckChained( blocks[c+1][r+1] ) ) {
           if ( blocks[c+1][r+1]->type == Blc::TYPE_1 || blocks[c+1][r+1]->type == Blc::TYPE_3 ) {
@@ -830,7 +834,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
           }
         }
       }
-      // 下
+      // ↓
       if ( c < COLS - 1 ) {
         if ( blocks[c+1][r]->isLive && !isAlreadyCheckChained( blocks[c+1][r] ) ) {
           if ( blocks[c+1][r]->type == Blc::TYPE_2 || blocks[c+1][r]->type == Blc::TYPE_3 ) {
@@ -849,7 +853,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
         }
       }
     } else {
-      // 上
+      // ↑
       if ( c > 0 ) {
         if ( blocks[c-1][r]->isLive && !isAlreadyCheckChained( blocks[c-1][r] ) ) {
           if ( blocks[c-1][r]->type == Blc::TYPE_2 || blocks[c-1][r]->type == Blc::TYPE_4 ) {
@@ -867,7 +871,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
           }
         }
       }
-      // 左
+      // ←
       if ( r > 0 ) {
         if ( blocks[c][r-1]->isLive && !isAlreadyCheckChained( blocks[c][r-1] ) ) {
           if ( blocks[c][r-1]->type == Blc::TYPE_2 || blocks[c][r-1]->type == Blc::TYPE_3 ) {
@@ -885,7 +889,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
           }
         }
       }
-      // 左上
+      // ↖
       if ( c > 0 && r > 0 ) {
         if ( blocks[c-1][r-1]->isLive && !isAlreadyCheckChained( blocks[c-1][r-1] ) ) {
           if ( blocks[c-1][r-1]->type == Blc::TYPE_1 || blocks[c-1][r-1]->type == Blc::TYPE_4 ) {
@@ -906,7 +910,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
     }
   } else if ( blocks[c][r]->type == Blc::TYPE_2 ) {
     if ( d == CHECK_FROM_L ) {
-      // 右隣
+      // →
       if ( blocks[c][r+1]->isLive && !isAlreadyCheckChained( blocks[c][r+1] ) ) {
         if ( blocks[c][r+1]->type == Blc::TYPE_1 || blocks[c][r+1]->type == Blc::TYPE_3 ) {
           pushChainedBlocks(blocks[c][r]);
@@ -922,7 +926,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
           }
         }
       }
-      //右斜め上隣
+      // ↗
       if ( c > 0 ) {
         if ( blocks[c-1][r+1]->isLive && !isAlreadyCheckChained( blocks[c-1][r+1] ) ) {
           if ( blocks[c-1][r+1]->type == Blc::TYPE_2 || blocks[c-1][r+1]->type == Blc::TYPE_4 ) {
@@ -940,7 +944,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
           }
         }
       }
-      // 上
+      // ↑
       if ( c > 0 ) {
         if ( blocks[c-1][r]->isLive && !isAlreadyCheckChained( blocks[c-1][r] ) ) {
           if ( blocks[c-1][r]->type == Blc::TYPE_1 || blocks[c-1][r]->type == Blc::TYPE_4 ) {
@@ -959,7 +963,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
         }
       }
     } else {
-      // 下
+      // ↓
       if ( c < COLS - 1 ) {
         if ( blocks[c+1][r]->isLive && !isAlreadyCheckChained( blocks[c+1][r] ) ) {
           if ( blocks[c+1][r]->type == Blc::TYPE_1 || blocks[c+1][r]->type == Blc::TYPE_3 ) {
@@ -977,7 +981,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
           }
         }
       }
-      // 左
+      // ←
       if ( r > 0 ) {
         if ( blocks[c][r-1]->isLive && !isAlreadyCheckChained( blocks[c][r-1] ) ) {
           if ( blocks[c][r-1]->type == Blc::TYPE_1 || blocks[c][r-1]->type == Blc::TYPE_4 ) {
@@ -995,7 +999,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
           }
         }
       }
-      // 左下
+      // ↙
       if ( c < COLS - 1 && r > 0 ) {
         if ( blocks[c+1][r-1]->isLive && !isAlreadyCheckChained( blocks[c+1][r-1] ) ) {
           if ( blocks[c+1][r-1]->type == Blc::TYPE_2 || blocks[c+1][r-1]->type == Blc::TYPE_3 ) {
@@ -1016,7 +1020,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
     }
   } else if ( blocks[c][r]->type == Blc::TYPE_3 ) {
     if ( d == CHECK_FROM_L ) {
-      // 右隣
+      // →
       if ( blocks[c][r+1]->isLive && !isAlreadyCheckChained( blocks[c][r+1] ) ) {
         if ( blocks[c][r+1]->type == Blc::TYPE_1 || blocks[c][r+1]->type == Blc::TYPE_3 ) {
           pushChainedBlocks(blocks[c][r]);
@@ -1032,7 +1036,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
           }
         }
       }
-      //右斜め上隣
+      // ↗
       if ( c > 0 ) {
         if ( blocks[c-1][r+1]->isLive && !isAlreadyCheckChained( blocks[c-1][r+1] ) ) {
           if ( blocks[c-1][r+1]->type == Blc::TYPE_2 || blocks[c-1][r+1]->type == Blc::TYPE_4 ) {
@@ -1050,7 +1054,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
           }
         }
       }
-      // 上
+      // ↑
       if ( c > 0 ) {
         if ( blocks[c-1][r]->isLive && !isAlreadyCheckChained( blocks[c-1][r] ) ) {
           if ( blocks[c-1][r]->type == Blc::TYPE_1 ) {
@@ -1069,7 +1073,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
         }
       }
     } else {
-      // 左
+      // ←
       if ( r > 0 ) {
         if ( blocks[c][r-1]->isLive && !isAlreadyCheckChained( blocks[c][r-1] ) ) {
           if ( blocks[c][r-1]->type == Blc::TYPE_2 || blocks[c][r-1]->type == Blc::TYPE_3 ) {
@@ -1087,7 +1091,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
           }
         }
       }
-      // 左上
+      // ↖
       if ( c > 0 && r > 0 ) {
         if ( blocks[c-1][r-1]->isLive && !isAlreadyCheckChained( blocks[c-1][r-1] ) ) {
           if ( blocks[c-1][r-1]->type == Blc::TYPE_1 || blocks[c-1][r-1]->type == Blc::TYPE_4 ) {
@@ -1105,7 +1109,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
           }
         }
       }
-      // 上
+      // ↑
       if ( c > 0 ) {
         if ( blocks[c-1][r]->isLive && !isAlreadyCheckChained( blocks[c-1][r] ) ) {
           if ( blocks[c-1][r]->type == Blc::TYPE_2 ) {
@@ -1126,7 +1130,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
     }
   } else if ( blocks[c][r]->type == Blc::TYPE_4 ) {
     if ( d == CHECK_FROM_L ) {
-      // 右隣
+      // →
       if ( blocks[c][r+1]->isLive && !isAlreadyCheckChained( blocks[c][r+1] ) ) {
         if ( blocks[c][r+1]->type == Blc::TYPE_2 || blocks[c][r+1]->type == Blc::TYPE_4 ) {
           pushChainedBlocks(blocks[c][r]);
@@ -1142,7 +1146,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
           }
         }
       }
-      //右斜め下隣
+      //↘
       if ( c < COLS - 1 ) {
         if ( blocks[c+1][r+1]->isLive && !isAlreadyCheckChained( blocks[c+1][r+1] ) ) {
           if ( blocks[c+1][r+1]->type == Blc::TYPE_1 || blocks[c+1][r+1]->type == Blc::TYPE_3 ) {
@@ -1160,7 +1164,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
           }
         }
       }
-      // 下
+      // ↓
       if ( c < COLS - 1 ) {
         if ( blocks[c+1][r]->isLive && !isAlreadyCheckChained( blocks[c+1][r] ) ) {
           if ( blocks[c+1][r]->type == Blc::TYPE_2 ) {
@@ -1179,7 +1183,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
         }
       }
     } else {
-      // 左
+      // ←
       if ( r > 0 ) {
         if ( blocks[c][r-1]->isLive && !isAlreadyCheckChained( blocks[c][r-1] ) ) {
           if ( blocks[c][r-1]->type == Blc::TYPE_1 || blocks[c][r-1]->type == Blc::TYPE_3 ) {
@@ -1197,7 +1201,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
           }
         }
       }
-      // 左下
+      // ↙
       if ( c < COLS - 1 && r > 0 ) {
         if ( blocks[c+1][r-1]->isLive && !isAlreadyCheckChained( blocks[c+1][r-1] ) ) {
           if ( blocks[c+1][r-1]->type == Blc::TYPE_2 || blocks[c+1][r-1]->type == Blc::TYPE_3 ) {
@@ -1215,7 +1219,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
           }
         }
       }
-      // 下
+      // ↓
       if ( c < COLS - 1 ) {
         if ( blocks[c+1][r]->isLive && !isAlreadyCheckChained( blocks[c+1][r] ) ) {
           if ( blocks[c+1][r]->type == Blc::TYPE_2 ) {
@@ -1236,7 +1240,7 @@ Serial.print("CELL["); Serial.print(c); Serial.print("]["); Serial.print(r); Ser
     }
   }
 
-  // 左端だったらchainedBlocksをクリア
+  // Clear chainedBlocks at left end
   if ( r == 0 ) {
     clearChainedBlocks();
   }
@@ -1284,7 +1288,7 @@ void clearChainedBlocks() {
   chainedBlockIdx = 0;
 }
 
-// 整数値の桁数を数える
+// Calculate the number of digits of an integer value
 int8_t digits(int32_t arg) {
   const int32_t digit_table[] = {10, 100, 1000, 10000, 100000};
   const int8_t digit_table_size = sizeof(digit_table) / sizeof(digit_table[0]);
@@ -1294,23 +1298,23 @@ int8_t digits(int32_t arg) {
       break;
     }
   }
-  return count + 1; // 桁数は、countに1を足したもの
+  return count + 1; // The number of digits is 1 added to the count.
 }
 
 void addBlock() {
 
-  // ブロックを全体的に上にずらす
+  // Offset the whole block upward.
   bool isContinueGame = slideAllBlocks();
-  // ゲームオーバー処理
+  // Game end processing
   if ( !isContinueGame ) {
     nowScene = Setting::SCENE_GAMEOVER;
   }
 
-  // 配置場所決定処理
+  // Configuration site determines the principle.
   int8_t nums[] = {-1, -1, -1, -1, -1};
   int8_t offset = 0;
 
-  // 1つも無い列は確定で追加する
+  // Definitely add a column that has none.
   for (int8_t r = 0; r < ROWS; r++) {
     bool isSetBlock = false;
     for (int8_t c = 0; c < COLS; c++) {
@@ -1340,7 +1344,7 @@ void addBlock() {
 }
 
 /*
- * ブロック追加データセットしなおし
+ * Reset Block Add Dataset
  */
 void addReset() {
   
@@ -1378,7 +1382,7 @@ bool slideAllBlocks() {
       if ( c == 0 && blocks[c][r]->isLive ) {
         removeBlock(c, r);
 #ifdef DEBUG_MODE
-// デバッグモードはゲームオーバーにならない
+// Debugging mode will not enter the game.
 #else
           return false;
 #endif
@@ -1413,7 +1417,7 @@ void initGame() {
     messages[i]->isLive = false;
   }
 
-  // 各変数初期化
+  // Initial stage of each number
   nowLevel = initLevel;
   nowScore = 0;
   remainAddFrame = 0;
@@ -1433,11 +1437,11 @@ void initGame() {
 
   player->set(0, 0);
 
-  // 初期配置
+  // Initial configuration
   for ( int8_t l = 0; l < 4; l++ ) {
     addBlock();
     int8_t t = random(0, 2);
-    // 最初に１ラインブロック追加
+    // Add a row block first.
     for ( int8_t i = 0; i < t; i++ ) {
       slideAllBlocks();
     }
@@ -1468,12 +1472,12 @@ void removeMessage( int8_t idx ) {
 }
 
 void saveHighScore(int32_t saveValue) {
-  EEPROM.put(epr_address+5, saveValue); // ハイスコアをEEPROMに保存する
+  EEPROM.put(epr_address+5, saveValue); // Save high score to EEPROM.
 }
 
 int32_t loadHighScore() {
   int32_t loadValue = 0;
-  EEPROM.get(epr_address+5, loadValue); // EEPROMからハイスコアを読み込む
+  EEPROM.get(epr_address+5, loadValue); // Read high score from EEPROM
   return loadValue;
 }
 
@@ -1493,7 +1497,7 @@ void initEEPROM() {
 }
 
 int freeMemory() {
-  // 値が変わらないので意味無さそう
+  // Because the price has not changed, it seems meaningless.
   char* heapend = (char*)(&__malloc_heap_start) + (int)(&__malloc_margin);
   char* stackend = (char*)SP;
   return stackend - heapend;

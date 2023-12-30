@@ -17,6 +17,8 @@ void Player::defocusPause() {
 void Player::init() {
   x = 0;
   y = 0;
+  // oldX = 0;
+  // oldY = 0;
   isFocusPause = false;
 }
 

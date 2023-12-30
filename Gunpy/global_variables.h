@@ -25,7 +25,7 @@ namespace Setting {
 
   extern const int8_t MSG_HIT;
   extern const int8_t MSG_HIT_ADD;
-  extern const int8_t MSG_HIT_SP; // 未使用欠番
+  extern const int8_t MSG_HIT_SP; // Unused shortfall
   extern const int8_t MSG_LEVEL_UP;
   extern const int8_t MSG_ALL_CLEAR;
 
