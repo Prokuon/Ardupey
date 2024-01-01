@@ -7,7 +7,7 @@ The code is mainly written by [chokmah.jp](https://community.arduboy.com/u/chokm
 Here are some changes I made
 
 * Fixed the following errors: 
-  * theoretically there are 4 different lines, but only 3 of them (\ / V) appeared in the previous version, and now the last one (Λ) has been added.
+  * Theoretically there are 4 different lines, but only 3 of them (\ / V) appeared in the previous version, and now the last one (Λ) has been added.
 
   * Fixed the error where lines would not be erased correctly in some cases (There may still be some undetected errors)
 
