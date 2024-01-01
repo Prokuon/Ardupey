@@ -12,7 +12,9 @@ Here are some changes I made
   * Fixed the error where lines would not be erased correctly in some cases (There may still be some undetected errors)
 
 * Redrawn the title and game interface
+
   ![Title](./assets/Title.jpg)
+  
   ![Interface](./assets/Interface.jpg)
 
 I like gunpey very much, and I am very grateful to chokmah.jp for recreating it on arduboy for us
