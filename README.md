@@ -13,7 +13,7 @@ Here are some changes I made
 
 * Redrawn the title and game interface
 
-  ![Title](./assets/Title.jpg)
+  ![Title](./assets/Title.png)
   
   ![Interface](./assets/Interface.jpg)
 
