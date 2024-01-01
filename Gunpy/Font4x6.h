@@ -3,11 +3,11 @@
 #include <Arduino.h>
 #include <Print.h>
 
-class Font4x6 : public Print {
-    
-  public:
+class Font4x6 : public Print
+{
 
-    Font4x6(uint8_t lineSpacing = 8);   
+public:
+    Font4x6(uint8_t lineSpacing = 8);
 
     virtual size_t write(uint8_t); // used by the Arduino Print class
     void printChar(const char c, const int8_t x, int8_t y);
@@ -15,17 +15,17 @@ class Font4x6 : public Print {
 
     void setTextColor(const uint8_t color);
     void setHeight(const uint8_t color);
-    
 
-  private:
+private:
+    int8_t _cursorX; // Default is 0.
+    int8_t _baseX;   // needed for linebreak.
+    int8_t _cursorY; // Default is 0.
 
-    int8_t _cursorX;    // Default is 0.
-    int8_t _baseX;      // needed for linebreak.
-    int8_t _cursorY;    // Default is 0.
+    int8_t
+        _textColor; // BLACK == 0, everything else is WHITE. Default is WHITE.
 
-    int8_t _textColor;  // BLACK == 0, everything else is WHITE. Default is WHITE.
-
-    uint8_t _letterSpacing;  // letterSpacing controls the distance between letters. Default is 1.
-    uint8_t _lineHeight;     // lineHeight controls the height between lines breakend by \n. Default is 8.
-
+    uint8_t _letterSpacing; // letterSpacing controls the distance between
+                            // letters. Default is 1.
+    uint8_t _lineHeight;    // lineHeight controls the height between lines
+                            // breakend by \n. Default is 8.
 };
