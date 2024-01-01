@@ -15,6 +15,6 @@ Here are some changes I made
 
   ![Title](./assets/Title.png)
   
-  ![Interface](./assets/Interface.jpg)
+  ![Interface](./assets/Interface.png)
 
 I like gunpey very much, and I am very grateful to chokmah.jp for recreating it on arduboy for us
